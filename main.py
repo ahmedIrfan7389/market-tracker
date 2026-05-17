@@ -6,6 +6,8 @@ from email.mime.text import MIMEText
 import requests
 import yfinance as yf
 from dotenv import load_dotenv
+import sys
+import traceback
 
 load_dotenv()
 
@@ -65,7 +67,11 @@ def check_markets():
 
             news = get_asset_news(asset["name"])
 
-            send_alert(asset["ticker"], up_down, percent_diff, news)
+            try:
+                send_alert(asset["ticker"], up_down, percent_diff, news)
+            except Exception as e:
+                print(f"Error sending alert for {asset['ticker']}: {e}")
+                traceback.print_exc()
 
         else:
             print(f"💤 {asset['ticker']} is stable. ({percent_diff:.2f}%)")
@@ -78,6 +84,10 @@ def get_asset_news(asset_name):
         "sortBy": "relevancy",
         "language": "en",
     }
+    if not NEWS_API_KEY:
+        print("Warning: NEWS_API_KEY not set — skipping news fetch.")
+        return []
+
     try:
         response = requests.get("https://newsapi.org/v2/everything", params=params)
         response.raise_for_status()
@@ -103,6 +113,11 @@ def send_alert(symbol, direction, pct, news_list):
     msg["From"] = EMAIL_USER
     msg["To"] = EMAIL_USER
 
+    if not EMAIL_USER or not EMAIL_PASS:
+        print("Warning: EMAIL_USER or EMAIL_PASS not set — skipping email send.")
+        print("Email body:\n", body)
+        return
+
     with smtplib.SMTP("smtp.gmail.com", 587) as server:
         server.starttls()
         server.login(EMAIL_USER, EMAIL_PASS)
@@ -110,4 +125,9 @@ def send_alert(symbol, direction, pct, news_list):
 
 
 if __name__ == "__main__":
-    check_markets()
+    try:
+        check_markets()
+    except Exception:
+        print("Unhandled exception in check_markets:")
+        traceback.print_exc()
+        sys.exit(1)
