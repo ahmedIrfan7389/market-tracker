@@ -1,5 +1,7 @@
 name: Market Tracker Daily Run
 
+# bump: force GitHub to re-evaluate workflows (no-op)
+
 on:
   schedule:
     # Runs every day at 5:00 PM PKT (12:00 PM UTC)
