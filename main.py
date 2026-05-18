@@ -1,21 +1,23 @@
 import html
 import os
 import smtplib
+import sys
+import traceback
 from email.mime.text import MIMEText
 
 import requests
 import yfinance as yf
 from dotenv import load_dotenv
-import sys
-import traceback
 
+# Load environment variables from a .env file
 load_dotenv()
 
+# API keys and credentials loaded from environment variables
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 
-
+# List of assets to monitor, each with a ticker, name, and alert threshold (% change)
 MY_ASSETS = [
     # --- LARGE CAP CRYPTO ---
     # (Threshold 5% because crypto is volatile)
@@ -39,6 +41,10 @@ MY_ASSETS = [
 
 
 def check_markets():
+    """
+    Checks the market prices for all assets in MY_ASSETS.
+    If the price change exceeds the asset's threshold, fetches related news and sends an alert.
+    """
     for asset in MY_ASSETS:
         # 1. Access the Ticker
         ticker = yf.Ticker(asset["ticker"])
@@ -78,6 +84,15 @@ def check_markets():
 
 
 def get_asset_news(asset_name):
+    """
+    Fetches the top 3 relevant news articles for a given asset name using NewsAPI.
+
+    Args:
+        asset_name (str): The name of the asset to search news for.
+
+    Returns:
+        list: A list of news article dictionaries (may be empty if API key is missing or request fails).
+    """
     params = {
         "q": asset_name,
         "apiKey": NEWS_API_KEY,
@@ -102,6 +117,15 @@ def get_asset_news(asset_name):
 
 
 def send_alert(symbol, direction, pct, news_list):
+    """
+    Sends an email alert about significant market activity for a given asset.
+
+    Args:
+        symbol (str): The ticker symbol of the asset.
+        direction (str): "🔺" for up, "🔻" for down.
+        pct (float): Percentage change in price.
+        news_list (list): List of news articles to include in the email.
+    """
     # Prepare the body
     body = f"Significant market activity detected for {symbol}:\n\n"
     for article in news_list:
@@ -125,6 +149,9 @@ def send_alert(symbol, direction, pct, news_list):
 
 
 if __name__ == "__main__":
+    """
+    Entry point: Checks all markets and handles any unhandled exceptions.
+    """
     try:
         check_markets()
     except Exception:
